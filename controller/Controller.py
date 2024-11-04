@@ -1,14 +1,16 @@
 from model.Model import Model
 from views.View import View
+from controller.ExcelGenerator import ExcelGenerator
 
 class Controller:
     view = None
     model = None
+    reporter = None
 
     def __init__(self, root):
         self.model = Model()
         self.view = View(root, self)
-        
+        self.reporter = ExcelGenerator()
         #self.model.add_latitud_longitude()
 
         if not self.model.load_preferences():
@@ -19,7 +21,7 @@ class Controller:
     
     def set_estacion(self, nombre):
         info = self.model.get_estacion_info(nombre)
-        self.view.set_estacion_info(info)
+        self.view.set_estacion_info(info, nombre)
 
     def update_view(self):
         self.view.create_estaciones_frame(self.model.estaciones)
@@ -48,3 +50,6 @@ class Controller:
         self.update_view()
 
         self.view.filtros_window.destroy()
+
+    def generate_excel(self, station):
+        self.reporter.generate_trend_analysis(station)

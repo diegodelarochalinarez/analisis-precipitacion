@@ -76,7 +76,7 @@ class Model:
         self.cursor.execute(select)
         clave = self.cursor.fetchone()
 
-        select = f"SELECT FECHA, PRECIPITACION FROM REGISTRODIARIO WHERE estclave = {clave[0]};"
+        select = f"SELECT FECHA, PRECIPITACION FROM REGISTRODIARIO WHERE estclave = {clave[0]} ORDER BY FECHA;"
         self.cursor.execute(select)
         result = self.cursor.fetchall()
       

@@ -9,6 +9,7 @@ class View:
     slider_missing_allowed = None
     check_save_preferences = None
     save_preferences = None
+    station_selected = None
 
     def __init__(self, root, controller):
         self.root = root
@@ -28,7 +29,9 @@ class View:
         self.btn_open_filters = ctk.CTkButton(master=self.frame_contenido, text='Filtros', command=self.controller.open_filters)
         self.btn_open_filters.grid(row=1, column=0, padx=15, pady=10, sticky='ne')
 
-        self.btn_download_modified = ctk.CTkButton(master=self.frame_contenido, text='Descargar base de datos modificada')
+        self.btn_download_modified = ctk.CTkButton(master=self.frame_contenido, text='Descargar base de datos modificada',
+                                                    command=lambda: self.controller.generate_excel(self.station_selected))
+        
         self.btn_download_modified.grid(row=1, column=1, padx=15, pady=10, sticky='new')
 
         self.btn_download_original = ctk.CTkButton(master=self.frame_contenido, text='Descargar original')
@@ -127,9 +130,10 @@ class View:
         self.lbl_slider_value.configure(text=f"{faltante}%")
         self.slider_missing_allowed.set(faltante)
 
-    def set_estacion_info(self, info):
+    def set_estacion_info(self, info, nombre):
         self.textbox_estacion_info.delete("0.0", "end")
         self.textbox_estacion_info.insert("0.0", info)
+        self.station_selected = nombre
 
     def create_table(self):
             style = ttk.Style()
