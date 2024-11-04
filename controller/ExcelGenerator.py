@@ -70,14 +70,16 @@ class ExcelGenerator:
 
         self.generate_scatter_plot(data, raw_data[1], max_month, max_sum)
 
-        self.generate_rolling_mean_plot(12, raw_data[0], max_month, max_sum, raw_data[1])
+        self.generate_rolling_mean_plot(12, raw_data[0], max_month, max_sum, raw_data[1],'H')
+        self.generate_rolling_mean_plot(18, raw_data[0], max_month, max_sum, raw_data[1],'I')
 
         scatter_plot_img = Image(f'./imgs/scatter_plot_{raw_data[1]}.png')
         rolling_mean_12 = Image(f'./imgs/rolling_mean_12_{raw_data[1]}.png')
+        rolling_mean_18 = Image(f'./imgs/rolling_mean_18_{raw_data[1]}.png')
 
         self.ws.add_image(scatter_plot_img, 'P8')  
         self.ws.add_image(rolling_mean_12, 'P33')
-
+        self.ws.add_image(rolling_mean_18, 'AA33')
         
         self.wb.save(f'./excels/analisis_tendencia_precipitacion_{raw_data[1]}.xlsx')     
 
@@ -108,40 +110,52 @@ class ExcelGenerator:
 
         print('scatter plot for ' + str(estclave) + ' was generated')
 
-    def generate_rolling_mean_plot(self, window, raw_data, max_month, max_value, estclave):
+    def generate_rolling_mean_plot(self, window, raw_data, max_month, max_value, estclave, letter):
         data = {
             'month' : [],
             'value' : []
         }
+        sum = 0.0
+        n = 0
 
-        for i in range (int(max_month - (window/2))):
-            self.ws[f'H{int(i+8+(window/2)-1)}'] = f'=AVERAGE(D{int(i+8)}:D{int(i+8+window-1)})'
+        for i in range (0, window):
+            if raw_data[i][2] != None:
+                sum += float(raw_data[i][2])
+                n += 1
+        l = 0
+        for i in range (window, len(raw_data) - window):
+            if n <= 0:
+                break
+
+            average = sum / n
+            data['value'].append(average)
             data['month'].append(i+1)
-            print(self.ws[f'D{i+1}'].value)            
+            self.ws[f'{letter}{int(i-window+(8+window/2-1))}'] = average
 
-        data = {
-            'month' : [],
-            'value' : []
-        }
+            if(raw_data[l][2] != None):
+                n -= 1
+                sum -= float(raw_data[l][2])
+            if(raw_data[i][2] != None):
+                n+=1
+                sum+=float(raw_data[i][2])
+            l+=1
 
-        for i, r in enumerate(raw_data, start=8):
-            data['month'].append(i-7)            
-            data['value'].append(r[2])
+
+        # for i in range (int(max_month - (window/2))):
+        #     self.ws[f'H{int(i+8+(window/2)-1)}'] = f'=AVERAGE(D{int(i+8)}:D{int(i+8+window-1)})'
 
         df = pd.DataFrame(data)
         df['rolling-window'] = df['value'].astype(float)
 
-        for i, value in enumerate(df['rolling-window'], start=13):
-            self.ws[f'I{i}'] = value
-
         trend = np.polyfit(df['month'], df['rolling-window'], 1)
         trend_line = np.poly1d(trend)
 
-        plt.plot(df['rolling-window'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
-        print(("y = %.6fx+(%.6f)"%(trend[0],trend[1])))
+        plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
+        print("y = %.6fx + (%.6f)" % (trend[0], trend[1]))
         plt.text(float(max_month)*0.65, float(max_value)*0.80,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
 
-        plt.plot(df.index, df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
+        plt.plot(df['month'], df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
+
         plt.xlabel('Mes')
         plt.ylabel('Precipitacion')
         plt.title(f'Promedio móvil {window} meses')
