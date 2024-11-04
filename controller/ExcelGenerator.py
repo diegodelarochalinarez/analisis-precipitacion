@@ -152,7 +152,7 @@ class ExcelGenerator:
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
         print("y = %.6fx + (%.6f)" % (trend[0], trend[1]))
-        plt.text(float(max_month)*0.65, float(max_value)*0.80,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
+        plt.text(0, 0,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
 
         plt.plot(df['month'], df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
 
