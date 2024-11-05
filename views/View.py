@@ -29,7 +29,8 @@ class View:
         self.btn_open_filters = ctk.CTkButton(master=self.frame_contenido, text='Filtros', command=self.controller.open_filters)
         self.btn_open_filters.grid(row=1, column=0, padx=15, pady=10, sticky='ne')
 
-        self.btn_download_modified = ctk.CTkButton(master=self.frame_contenido, text='Descargar base de datos modificada')
+        self.btn_download_modified = ctk.CTkButton(master=self.frame_contenido, text='Descargar base de datos modificada',
+                                                   command=lambda: self.controller.generate_modified_excel(self.station_selected))
         
         self.btn_download_modified.grid(row=1, column=1, padx=15, pady=10, sticky='new')
 

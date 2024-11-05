@@ -52,4 +52,7 @@ class Controller:
         self.view.filtros_window.destroy()
 
     def generate_excel(self, station):
-        self.reporter.generate_trend_analysis(station)
+        self.reporter.generate_trend_analysis(station, 'original_data')
+
+    def generate_modified_excel(self, station):
+        self.reporter.generate_trend_analysis(station, 'modified_data', 2)

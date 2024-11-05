@@ -11,7 +11,7 @@ class ExcelGenerator:
     wb = Workbook()
     ws = wb.active
 
-    def get_raw_data(self, station_name):
+    def get_original_raw_data(self, station_name):
         select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{station_name}'"
         self.model.cursor.execute(select)
         estclave = self.model.cursor.fetchone()[0]
@@ -29,9 +29,25 @@ class ExcelGenerator:
         self.model.cursor.execute(select)
         raw_data = self.model.cursor.fetchall()
         return raw_data, estclave
+    
+    def get_modified_data(self, station_name, n):
+        select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{station_name}'"
+        self.model.cursor.execute(select)
+        estclave = self.model.cursor.fetchone()[0]
 
-    def generate_trend_analysis(self, station):
-        raw_data = self.get_raw_data(station)
+        select = f"select * from get_precipitation_estimation({estclave}, {n});"
+        self.model.cursor.execute(select)
+        raw_data = self.model.cursor.fetchall()
+
+        return raw_data, estclave
+    
+    def generate_trend_analysis(self, station, data_type, n=0):
+        raw_data = None
+
+        if data_type == 'original_data':
+            raw_data = self.get_original_raw_data(station)
+        else:
+            raw_data = self.get_modified_data(station, n)
 
         self.ws.title = "Analisis de Tendencia"
 
@@ -81,7 +97,11 @@ class ExcelGenerator:
         self.ws.add_image(rolling_mean_12, 'P33')
         self.ws.add_image(rolling_mean_18, 'AA33')
         
-        self.wb.save(f'./excels/analisis_tendencia_precipitacion_{raw_data[1]}.xlsx')     
+        if data_type == 'original_data':
+            self.wb.save(f'./excels/analisis_tendencia_precipitacion_{raw_data[1]}.xlsx')     
+        else:
+            self.wb.save(f'./excels/analisis_tendencia_precipitacion_modificado_{raw_data[1]}.xlsx')     
+             
 
     def generate_scatter_plot(self, data, estclave, max_month, max_value):
         df = pd.DataFrame(data)
@@ -118,16 +138,21 @@ class ExcelGenerator:
         sum = 0.0
         n = 0
 
+        max_month = 0
+        max_value = 0
         for i in range (0, window):
             if raw_data[i][2] != None:
                 sum += float(raw_data[i][2])
                 n += 1
+        
         l = 0
         for i in range (window, len(raw_data) - window):
             if n <= 0:
                 break
-
+            
             average = sum / n
+            max_value = max(average, max_value)
+            max_month = i+1
             data['value'].append(average)
             data['month'].append(i+1)
             self.ws[f'{letter}{int(i-window+(8+window/2-1))}'] = average
@@ -152,7 +177,7 @@ class ExcelGenerator:
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
         print("y = %.6fx + (%.6f)" % (trend[0], trend[1]))
-        plt.text(0, 0,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
+        plt.text(max_month*0.65, max_value*0.8,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
 
         plt.plot(df['month'], df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
 
