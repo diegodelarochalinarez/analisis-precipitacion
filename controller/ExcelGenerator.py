@@ -72,13 +72,17 @@ class ExcelGenerator:
         
         max_month = 0
         max_sum = 0
+    
         for i, r in enumerate(raw_data[0], start=8):
             self.ws[f'B{i}'] = r[0]
             self.ws[f'C{i}'] = r[1]
-            self.ws[f'D{i}'] = r[2]
+            if r[3] > 15:
+                self.ws[f'D{i}'] = r[2]
             self.ws[f'E{i}'] = r[3]
-            if(r[2] == None):
+                
+            if(r[2] == None or r[3] < 15):
                 continue
+
             data['month'].append(i-7)            
             data['value'].append(r[2])
             max_month = i-7
@@ -98,9 +102,9 @@ class ExcelGenerator:
         self.ws.add_image(rolling_mean_18, 'AA33')
         
         if data_type == 'original_data':
-            self.wb.save(f'./excels/analisis_tendencia_precipitacion_{raw_data[1]}.xlsx')     
+            self.wb.save(f'./excels/analisis_tendencia_precipitacion_{station}.xlsx')     
         else:
-            self.wb.save(f'./excels/analisis_tendencia_precipitacion_modificado_{raw_data[1]}.xlsx')     
+            self.wb.save(f'./excels/analisis_tendencia_precipitacion_modificado_{station}.xlsx')     
              
 
     def generate_scatter_plot(self, data, estclave, max_month, max_value):
