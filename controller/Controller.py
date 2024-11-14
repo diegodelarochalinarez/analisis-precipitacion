@@ -53,6 +53,14 @@ class Controller:
 
     def generate_excel(self, station):
         self.reporter.generate_trend_analysis(station, 'original_data')
+        if self.reporter.missing_consecutives_months > 6:
+            self.view.display_warning("Esta estación tiene más de 6 meses consecutivos faltantes, por lo que el análisis de tendencia puede estar erróneo")
+        else:
+            self.view.display_message("Análisis de tendencia generado exitosamente!")
 
     def generate_modified_excel(self, station):
         self.reporter.generate_trend_analysis(station, 'modified_data', 2)
+        if self.reporter.missing_consecutives_months > 6:
+            self.view.display_warning("Esta estación tiene más de 6 meses consecutivos faltantes, por lo que el análisis de tendencia puede estar erróneo")
+        else:
+            self.view.display_message("Análisis de tendencia con datos modificados generado exitosamente!")

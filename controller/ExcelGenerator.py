@@ -5,11 +5,13 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image
 from model.Model import Model
 from openpyxl.styles import Font
+import pymannkendall as mk
 
 class ExcelGenerator:
     model = Model()
     wb = Workbook()
     ws = wb.active
+    missing_consecutives_months = 0
 
     def get_original_raw_data(self, station_name):
         select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{station_name}'"
@@ -72,7 +74,10 @@ class ExcelGenerator:
         
         max_month = 0
         max_sum = 0
-    
+        self.missing_consecutives_months = 0    
+        missing = 0
+        generated_data = 0
+
         for i, r in enumerate(raw_data[0], start=8):
             self.ws[f'B{i}'] = r[0]
             self.ws[f'C{i}'] = r[1]
@@ -81,7 +86,15 @@ class ExcelGenerator:
             self.ws[f'E{i}'] = r[3]
                 
             if(r[2] == None or r[3] < 15):
+                if(data_type != 'original_data'):
+                    #print(f"{r[0]} {r[1]}")
+                    generated_data+=1
+
+                missing += 1
+                if (missing > 6):
+                    self.missing_consecutives_months = max(self.missing_consecutives_months, missing)                    
                 continue
+            missing = 0
 
             data['month'].append(i-7)            
             data['value'].append(r[2])
@@ -100,7 +113,10 @@ class ExcelGenerator:
         self.ws.add_image(scatter_plot_img, 'P8')  
         self.ws.add_image(rolling_mean_12, 'P33')
         self.ws.add_image(rolling_mean_18, 'AA33')
-        
+
+        self.ws['K5'] = f'Datos generados: {generated_data}'
+        self.ws['K5'].font = Font(name='Arial', size=12, bold=True, color="000000")
+
         if data_type == 'original_data':
             self.wb.save(f'./excels/analisis_tendencia_precipitacion_{station}.xlsx')     
         else:
@@ -109,6 +125,10 @@ class ExcelGenerator:
 
     def generate_scatter_plot(self, data, estclave, max_month, max_value):
         df = pd.DataFrame(data)
+
+        result = mk.original_test(df['value'])
+        print(result)
+
         plt.scatter(df['month'], df['value'], color='blue', alpha=0.5, label='Sum-Precipitacion')
         df['value'] = df['value'].astype(float)
 
@@ -116,7 +136,6 @@ class ExcelGenerator:
         trend_line = np.poly1d(trend)
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
-        print(("y = %.6fx+(%.6f)"%(trend[0],trend[1])))
         plt.text(float(max_month)*0.65, float(max_value)*0.80,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
 
         for i in range(len(df) - 1):
@@ -131,8 +150,6 @@ class ExcelGenerator:
 
         plt.savefig(f'./imgs/scatter_plot_{estclave}.png')
         plt.close()
-
-        print('scatter plot for ' + str(estclave) + ' was generated')
 
     def generate_rolling_mean_plot(self, window, raw_data, max_month, max_value, estclave, letter):
         data = {
@@ -180,7 +197,7 @@ class ExcelGenerator:
         trend_line = np.poly1d(trend)
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
-        print("y = %.6fx + (%.6f)" % (trend[0], trend[1]))
+        
         plt.text(max_month*0.65, max_value*0.8,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
 
         plt.plot(df['month'], df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
@@ -191,9 +208,4 @@ class ExcelGenerator:
         plt.legend()
 
         plt.savefig(f'./imgs/rolling_mean_{window}_{estclave}.png')
-        plt.close()
-
-        print(f'rolling mean plot with a window of {window} for {estclave} was generated')
-         
-
-        
+        plt.close()         

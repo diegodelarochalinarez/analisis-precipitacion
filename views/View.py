@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import tkinter as ttk
+from tkinter import messagebox
 
 class View:
     input_end_year = None
@@ -106,7 +107,13 @@ class View:
         x = (ws/2) - (w/2)
         y = (hs/2) - (h/2)
         self.filtros_window.geometry('%dx%d+%d+%d' % (w, h, x, y))
+    
+    def display_message(self, message):
+        messagebox.showinfo("Mensaje!", message)
 
+    def display_warning(self, message):
+        messagebox.showwarning("Mensaje", message)
+        
     def create_estaciones_frame(self, nombres):
         self.frame_estaciones = ctk.CTkScrollableFrame(master=self.root, height=720, width=250)
         self.frame_estaciones.grid(row=0, column=0, columnspan=1, rowspan=2, sticky='NSEW')

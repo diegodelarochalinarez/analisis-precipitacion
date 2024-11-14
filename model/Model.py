@@ -70,7 +70,6 @@ class Model:
         estacion_info = ""
 
         estacion_info += f"Previsualización de los datos de la estación: {nombre}\n\n"
-        estacion_info += "Fecha                | Precipitacion\n"
 
         select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{nombre}';"
         self.cursor.execute(select)
@@ -79,7 +78,28 @@ class Model:
         select = f"SELECT FECHA, PRECIPITACION FROM REGISTRODIARIO WHERE estclave = {clave[0]} ORDER BY FECHA;"
         self.cursor.execute(select)
         result = self.cursor.fetchall()
-      
+
+        
+        select = f"SELECT fn_missing_percentage({clave[0]});"
+        self.cursor.execute(select)
+        missing_percentage = self.cursor.fetchone() 
+
+        
+        select = f"SELECT faltantes FROM estaciones where estclave = {clave[0]};"
+        self.cursor.execute(select)
+        faltantes = self.cursor.fetchone() 
+
+        select = f"SELECT count(*) FROM registrodiario where estclave = {clave[0]};"
+        self.cursor.execute(select)
+        totales = self.cursor.fetchone() 
+
+        estacion_info += f"Registros totales: {totales[0]}\n"
+        estacion_info += f"Registros faltantes: {faltantes[0]} \n"
+        estacion_info += f"Porcentaje faltante: {missing_percentage[0]}% \n\n"
+         
+        
+        estacion_info += "Fecha                | Precipitacion\n"
+
         for t in result:
             estacion_info += f"{t[0]}      |        {t[1]}\n"
         return estacion_info
