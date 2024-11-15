@@ -122,12 +122,45 @@ class ExcelGenerator:
         else:
             self.wb.save(f'./excels/analisis_tendencia_precipitacion_modificado_{station}.xlsx')     
              
+    def generate_mannkendall_test(self, data):
+        self.ws['K10'] = 'trend'
+        self.ws['K11'] = 'H'
+        self.ws['K12'] = 'P'
+        self.ws['K13'] = 'Z'
+        self.ws['K14'] = 'Tau'
+        self.ws['K15'] = 'S'
+        self.ws['K16'] = 'Var_S'
+        self.ws['K17'] = 'Slope'
+        self.ws['K18'] = 'Intercept'
+
+        result = mk.original_test(data)
+        self.ws['L10'] = result.trend
+        self.ws['L11'] = result.h
+        self.ws['L12'] = result.p
+        self.ws['L13'] = result.z
+        self.ws['L14'] = result.Tau
+        self.ws['L15'] = result.s
+        self.ws['L16'] = result.var_s
+        self.ws['L17'] = result.slope
+        self.ws['L18'] = result.intercept
+
+        result = mk.seasonal_test(data)
+        self.ws['M10'] = result.trend
+        self.ws['M11'] = result.h
+        self.ws['M12'] = result.p
+        self.ws['M13'] = result.z
+        self.ws['M14'] = result.Tau
+        self.ws['M15'] = result.s
+        self.ws['M16'] = result.var_s
+        self.ws['M17'] = result.slope
+        self.ws['M18'] = result.intercept
+
+        result = mk.sens_slope(data)
+        self.ws['N17'] = result.slope
+        self.ws['N18'] = result.intercept
 
     def generate_scatter_plot(self, data, estclave, max_month, max_value):
         df = pd.DataFrame(data)
-
-        result = mk.original_test(df['value'])
-        print(result)
 
         plt.scatter(df['month'], df['value'], color='blue', alpha=0.5, label='Sum-Precipitacion')
         df['value'] = df['value'].astype(float)
@@ -186,6 +219,8 @@ class ExcelGenerator:
                 sum+=float(raw_data[i][2])
             l+=1
 
+        if(window == 12):  
+            self.generate_mannkendall_test(data['value'])
 
         # for i in range (int(max_month - (window/2))):
         #     self.ws[f'H{int(i+8+(window/2)-1)}'] = f'=AVERAGE(D{int(i+8)}:D{int(i+8+window-1)})'

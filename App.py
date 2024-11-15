@@ -14,7 +14,8 @@ def main():
     root.rowconfigure(2, weight=1)
     
     app = Controller(root)
-    
+    root.iconbitmap('./icono.ico')
+
     w = 1280 
     h = 720
     ws = root.winfo_screenwidth()
