@@ -12,6 +12,8 @@ class ExcelGenerator:
     wb = Workbook()
     ws = wb.active
     missing_consecutives_months = 0
+    start_month = None
+    start_year = None
 
     def get_original_raw_data(self, station_name):
         select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{station_name}'"
@@ -30,6 +32,10 @@ class ExcelGenerator:
         """
         self.model.cursor.execute(select)
         raw_data = self.model.cursor.fetchall()
+
+        self.start_month = raw_data[0][1]
+        self.start_year= raw_data[0][0]
+
         return raw_data, estclave
     
     def get_modified_data(self, station_name, n):
@@ -87,7 +93,6 @@ class ExcelGenerator:
                 
             if(r[2] == None or r[3] < 15):
                 if(data_type != 'original_data'):
-                    #print(f"{r[0]} {r[1]}")
                     generated_data+=1
 
                 missing += 1
@@ -102,9 +107,12 @@ class ExcelGenerator:
             max_sum = max(max_sum, r[2])
 
         self.generate_scatter_plot(data, raw_data[1], max_month, max_sum)
-
-        self.generate_rolling_mean_plot(12, raw_data[0], max_month, max_sum, raw_data[1],'H')
-        self.generate_rolling_mean_plot(18, raw_data[0], max_month, max_sum, raw_data[1],'I')
+        
+        data, max_month, max_value = self.prepare_rolling_mean_data(12, raw_data[0], 'H')
+        self.generate_rolling_mean_plot(data, 12, max_month, max_value, raw_data[1])
+        
+        data, max_month, max_value = self.prepare_rolling_mean_data(18, raw_data[0], 'I')
+        self.generate_rolling_mean_plot(data, 18, max_month, max_value, raw_data[1])
 
         scatter_plot_img = Image(f'./imgs/scatter_plot_{raw_data[1]}.png')
         rolling_mean_12 = Image(f'./imgs/rolling_mean_12_{raw_data[1]}.png')
@@ -114,6 +122,8 @@ class ExcelGenerator:
         self.ws.add_image(rolling_mean_12, 'P33')
         self.ws.add_image(rolling_mean_18, 'AA33')
 
+        self.generate_mannkendall_test(data['value'])
+
         self.ws['K5'] = f'Datos generados: {generated_data}'
         self.ws['K5'].font = Font(name='Arial', size=12, bold=True, color="000000")
 
@@ -122,42 +132,43 @@ class ExcelGenerator:
         else:
             self.wb.save(f'./excels/analisis_tendencia_precipitacion_modificado_{station}.xlsx')     
              
-    def generate_mannkendall_test(self, data):
-        self.ws['K10'] = 'trend'
-        self.ws['K11'] = 'H'
-        self.ws['K12'] = 'P'
-        self.ws['K13'] = 'Z'
-        self.ws['K14'] = 'Tau'
-        self.ws['K15'] = 'S'
-        self.ws['K16'] = 'Var_S'
-        self.ws['K17'] = 'Slope'
-        self.ws['K18'] = 'Intercept'
+    def generate_mannkendall_test(self, data, row = 10):
+        self.ws[f'K{row}'] = 'Trend'
+        self.ws[f'K{row+1}'] = 'H'
+        self.ws[f'K{row+2}'] = 'P'
+        self.ws[f'K{row+3}'] = 'Z'
+        self.ws[f'K{row+4}'] = 'Tau'
+        self.ws[f'K{row+5}'] = 'S'
+        self.ws[f'K{row+6}'] = 'Var_S'
+        self.ws[f'K{row+7}'] = 'Slope'
+        self.ws[f'K{row+8}'] = 'Intercept'
 
         result = mk.original_test(data)
-        self.ws['L10'] = result.trend
-        self.ws['L11'] = result.h
-        self.ws['L12'] = result.p
-        self.ws['L13'] = result.z
-        self.ws['L14'] = result.Tau
-        self.ws['L15'] = result.s
-        self.ws['L16'] = result.var_s
-        self.ws['L17'] = result.slope
-        self.ws['L18'] = result.intercept
+        self.ws[f'L{row}'] = result.trend
+        self.ws[f'L{row+1}'] = result.h
+        self.ws[f'L{row+2}'] = result.p
+        self.ws[f'L{row+3}'] = result.z
+        self.ws[f'L{row+4}'] = result.Tau
+        self.ws[f'L{row+5}'] = result.s
+        self.ws[f'L{row+6}'] = result.var_s
+        self.ws[f'L{row+7}'] = result.slope
+        self.ws[f'L{row+8}'] = result.intercept
 
         result = mk.seasonal_test(data)
-        self.ws['M10'] = result.trend
-        self.ws['M11'] = result.h
-        self.ws['M12'] = result.p
-        self.ws['M13'] = result.z
-        self.ws['M14'] = result.Tau
-        self.ws['M15'] = result.s
-        self.ws['M16'] = result.var_s
-        self.ws['M17'] = result.slope
-        self.ws['M18'] = result.intercept
+        self.ws[f'M{row}'] = result.trend
+        self.ws[f'M{row+1}'] = result.h
+        self.ws[f'M{row+2}'] = result.p
+        self.ws[f'M{row+3}'] = result.z
+        self.ws[f'M{row+4}'] = result.Tau
+        self.ws[f'M{row+5}'] = result.s
+        self.ws[f'M{row+6}'] = result.var_s
+        self.ws[f'M{row+7}'] = result.slope
+        self.ws[f'M{row+8}'] = result.intercept
 
         result = mk.sens_slope(data)
-        self.ws['N17'] = result.slope
-        self.ws['N18'] = result.intercept
+        self.ws[f'N{row+7}'] = result.slope
+        self.ws[f'N{row+8}'] = result.intercept
+
 
     def generate_scatter_plot(self, data, estclave, max_month, max_value):
         df = pd.DataFrame(data)
@@ -170,7 +181,7 @@ class ExcelGenerator:
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
         plt.text(float(max_month)*0.65, float(max_value)*0.80,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
-
+        
         for i in range(len(df) - 1):
                         plt.plot([df['month'].iloc[i], df['month'].iloc[i + 1]], 
                         [df['value'].iloc[i], df['value'].iloc[i + 1]], 
@@ -184,47 +195,45 @@ class ExcelGenerator:
         plt.savefig(f'./imgs/scatter_plot_{estclave}.png')
         plt.close()
 
-    def generate_rolling_mean_plot(self, window, raw_data, max_month, max_value, estclave, letter):
-        data = {
-            'month' : [],
-            'value' : []
-        }
+
+    def prepare_rolling_mean_data(self, window, raw_data, letter):
+        data = {'month': [], 'value': []}
         sum = 0.0
         n = 0
 
         max_month = 0
         max_value = 0
-        for i in range (0, window):
-            if raw_data[i][2] != None:
+        
+        for i in range(window):
+            if raw_data[i][2] is not None:
                 sum += float(raw_data[i][2])
                 n += 1
         
-        l = 0
-        for i in range (window, len(raw_data) - window):
+        l = 0  
+        for i in range(window, len(raw_data) - window):
             if n <= 0:
                 break
-            
+
             average = sum / n
             max_value = max(average, max_value)
-            max_month = i+1
-            data['value'].append(average)
-            data['month'].append(i+1)
-            self.ws[f'{letter}{int(i-window+(8+window/2-1))}'] = average
+            max_month = i + 1
 
-            if(raw_data[l][2] != None):
+            data['value'].append(average)
+            data['month'].append(i + 1)
+
+            self.ws[f'{letter}{int(i - window + (8 + window / 2 - 1))}'] = average
+
+            if raw_data[l][2] is not None:
                 n -= 1
                 sum -= float(raw_data[l][2])
-            if(raw_data[i][2] != None):
-                n+=1
-                sum+=float(raw_data[i][2])
-            l+=1
+            if raw_data[i][2] is not None:
+                n += 1
+                sum += float(raw_data[i][2])
+            l += 1
 
-        if(window == 12):  
-            self.generate_mannkendall_test(data['value'])
+        return data, max_month, max_value
 
-        # for i in range (int(max_month - (window/2))):
-        #     self.ws[f'H{int(i+8+(window/2)-1)}'] = f'=AVERAGE(D{int(i+8)}:D{int(i+8+window-1)})'
-
+    def generate_rolling_mean_plot(self, data, window, max_month, max_value, estclave, interval="", start=0):
         df = pd.DataFrame(data)
         df['rolling-window'] = df['value'].astype(float)
 
@@ -232,9 +241,7 @@ class ExcelGenerator:
         trend_line = np.poly1d(trend)
 
         plt.plot(df['month'], trend_line(df['month']), color='red', linewidth=1, label='Trend Line')
-        
-        plt.text(max_month*0.65, max_value*0.8,  ("y = %.6fx+(%.6f)"%(trend[0],trend[1])), fontsize = 8, color='red')
-
+        plt.text(((start/2)+max_month) * 0.65, max_value * 0.8, f"y = {trend[0]:.6f}x + ({trend[1]:.6f})", fontsize=8, color='red')
         plt.plot(df['month'], df['rolling-window'], label=f'Promedio móvil {window} meses', linestyle='solid')
 
         plt.xlabel('Mes')
@@ -242,5 +249,9 @@ class ExcelGenerator:
         plt.title(f'Promedio móvil {window} meses')
         plt.legend()
 
-        plt.savefig(f'./imgs/rolling_mean_{window}_{estclave}.png')
-        plt.close()         
+        plt.savefig(f'./imgs/rolling_mean_{window}_{estclave}{interval}.png')
+        plt.close()
+
+    def reset_report(self):
+        self.wb = Workbook()
+        self.ws = self.wb.active

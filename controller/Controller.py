@@ -1,16 +1,19 @@
 from model.Model import Model
 from views.View import View
 from controller.ExcelGenerator import ExcelGenerator
+from controller.TrendFinder import TrendFinder
 
 class Controller:
     view = None
     model = None
     reporter = None
+    trend_finder = None
 
     def __init__(self, root):
         self.model = Model()
         self.view = View(root, self)
         self.reporter = ExcelGenerator()
+        self.trend_finder = TrendFinder()
         #self.model.add_latitud_longitude()
 
         if not self.model.load_preferences():
@@ -35,7 +38,7 @@ class Controller:
         faltante = self.model.user_preferences["missing"]
 
         if self.model.user_preferences["estaciones"]:
-            self.view.show_preferences(min_years, max_years, start_year, end_year, faltante)
+            self.view.show_preferences(min_years, max_years, start_year, end_year, faltante)  
 
     def confirm_filters(self):
         min_years = 0 if self.view.input_min_years.get() == "" else int(self.view.input_min_years.get())
@@ -51,12 +54,24 @@ class Controller:
 
         self.view.filtros_window.destroy()
 
+    def search_trend_intervals(self, station):
+        interval = self.view.display_interval_input()
+        trend_intervals = self.trend_finder.search_trend(interval, station)
+
+        if trend_intervals == 0:
+            self.view.display_warning("No se encontraron periodos con tendencia")
+        else:
+            self.view.display_message(f"Se encontrarón {trend_intervals} periodos con tendencia")
+        
+        self.reporter.reset_report()
+
     def generate_excel(self, station):
         self.reporter.generate_trend_analysis(station, 'original_data')
         if self.reporter.missing_consecutives_months > 6:
             self.view.display_warning("Esta estación tiene más de 6 meses consecutivos faltantes, por lo que el análisis de tendencia puede estar erróneo")
         else:
             self.view.display_message("Análisis de tendencia generado exitosamente!")
+        self.reporter.reset_report()
 
     def generate_modified_excel(self, station):
         self.reporter.generate_trend_analysis(station, 'modified_data', 2)
@@ -64,3 +79,4 @@ class Controller:
             self.view.display_warning("Esta estación tiene más de 6 meses consecutivos faltantes, por lo que el análisis de tendencia puede estar erróneo")
         else:
             self.view.display_message("Análisis de tendencia con datos modificados generado exitosamente!")
+        self.reporter.reset_report()

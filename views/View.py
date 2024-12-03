@@ -27,17 +27,26 @@ class View:
         self.textbox_estacion_info = ctk.CTkTextbox(master=self.frame_contenido, width=900, height=500, state='normal')
         self.textbox_estacion_info.grid(row=0, column=0, columnspan=3, padx=50, pady=25, sticky='new')
         
-        self.btn_open_filters = ctk.CTkButton(master=self.frame_contenido, text='Filtros', command=self.controller.open_filters)
-        self.btn_open_filters.grid(row=1, column=0, padx=15, pady=10, sticky='ne')
+        self.frame_buttons = ctk.CTkFrame(master=self.frame_contenido, fg_color='transparent') 
+        self.frame_buttons.grid(row=1, column=0, columnspan=4, padx=15, pady=10, sticky='sew')  
 
-        self.btn_download_modified = ctk.CTkButton(master=self.frame_contenido, text='Descargar base de datos modificada',
-                                                   command=lambda: self.controller.generate_modified_excel(self.station_selected))
-        
-        self.btn_download_modified.grid(row=1, column=1, padx=15, pady=10, sticky='new')
+        self.frame_buttons.grid_columnconfigure((0, 1, 2, 3), weight=1)  
 
-        self.btn_download_original = ctk.CTkButton(master=self.frame_contenido, text='Descargar original',
-                                                    command=lambda: self.controller.generate_excel(self.station_selected))
-        self.btn_download_original.grid(row=1, column=2, padx=15, pady=10, sticky='nw')
+        self.btn_open_filters = ctk.CTkButton(master=self.frame_buttons, text='Filtros', command=self.controller.open_filters)
+        self.btn_open_filters.grid(row=0, column=0, padx=10, pady=10, sticky='ew')  
+
+        self.btn_scan_trend = ctk.CTkButton(master=self.frame_buttons, text='Buscar tendencia', command = lambda: self.controller.search_trend_intervals(self.station_selected))
+        self.btn_scan_trend.grid(row=0, column=1, padx=10, pady=10, sticky='ew')  
+
+        self.btn_download_modified = ctk.CTkButton(
+            master=self.frame_buttons, text='Descargar base de datos modificada',
+            command=lambda: self.controller.generate_modified_excel(self.station_selected))
+        self.btn_download_modified.grid(row=0, column=2, padx=10, pady=10, sticky='ew') 
+
+        self.btn_download_original = ctk.CTkButton(
+            master=self.frame_buttons, text='Descargar original',
+            command=lambda: self.controller.generate_excel(self.station_selected))
+        self.btn_download_original.grid(row=0, column=3, padx=10, pady=10, sticky='ew')
         
         self.frame_contenido.grid_rowconfigure(0, weight=1)
         self.frame_contenido.grid_rowconfigure(1, weight=0)
@@ -62,7 +71,7 @@ class View:
         self.filtros_window.resizable(width=False, height=False)
         self.filtros_window.grid_rowconfigure(7, weight=1)
         self.filtros_window.grid_columnconfigure(2, weight=1)
-     
+        
         lbl_filtros = ctk.CTkLabel(master=self.filtros_window, text="Filtros", font=ctk.CTkFont(weight="bold", size=16))
         lbl_filtros.grid(row=0, sticky="nw", padx="10", pady="10")
 
@@ -113,6 +122,10 @@ class View:
 
     def display_warning(self, message):
         messagebox.showwarning("Mensaje", message)
+
+    def display_interval_input(self):
+        dialog = ctk.CTkInputDialog(text="Ingresa el intervalo de búsqueda de tendencia:", title="Búsqueda de tendencia")
+        return (int) (dialog.get_input())
         
     def create_estaciones_frame(self, nombres):
         self.frame_estaciones = ctk.CTkScrollableFrame(master=self.root, height=720, width=250)
@@ -131,6 +144,10 @@ class View:
             self.btn_estaciones.append(button)
     
     def show_preferences(self, min_years, max_years, start_year, end_year, faltante):
+        self.input_end_year.delete(0, "end")
+        self.input_min_years.delete(0, "end")
+        self.input_max_years.delete(0, "end")
+        self.input_start_year.delete(0, "end")
         self.input_end_year.insert(0, end_year)
         self.input_min_years.insert(0, min_years)
         self.input_max_years.insert(0, max_years)

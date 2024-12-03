@@ -8,7 +8,8 @@ import json
 
 class Model:
     conn = psql.connect(database="Precipitacion",
-                        host="172.20.160.1",
+                        #host="26.21.167.220",
+                        host="localhost",
                         user="diego",
                         password="root",
                         port="5432")
@@ -67,42 +68,65 @@ class Model:
             self.save_preferences()
 
     def get_estacion_info(self, nombre):
-        estacion_info = ""
+        estacion_info = f"Previsualización de los datos de la estación: {nombre}\n\n"
 
-        estacion_info += f"Previsualización de los datos de la estación: {nombre}\n\n"
-
-        select = f"SELECT ESTCLAVE FROM ESTACIONES WHERE ESTNOMBRE = '{nombre}';"
-        self.cursor.execute(select)
-        clave = self.cursor.fetchone()
-
-        select = f"SELECT FECHA, PRECIPITACION FROM REGISTRODIARIO WHERE estclave = {clave[0]} ORDER BY FECHA;"
-        self.cursor.execute(select)
-        result = self.cursor.fetchall()
-
+        query = f"""
+            WITH station_data AS (
+                SELECT 
+                    estclave, latitud, longitud, faltantes 
+                FROM 
+                    estaciones 
+                WHERE 
+                    estnombre = %s
+            ),
+            total_records AS (
+                SELECT 
+                    COUNT(*) AS total 
+                FROM 
+                    registrodiario 
+                WHERE 
+                    estclave = (SELECT estclave FROM station_data)
+            ),
+            missing_percentage AS (
+                SELECT 
+                    fn_missing_percentage((SELECT estclave FROM station_data)) AS percentage
+            )
+            SELECT 
+                s.estclave,
+                s.latitud,
+                s.longitud,
+                s.faltantes,
+                t.total,
+                m.percentage 
+            FROM 
+                station_data s, total_records t, missing_percentage m;
+        """
         
-        select = f"SELECT fn_missing_percentage({clave[0]});"
-        self.cursor.execute(select)
-        missing_percentage = self.cursor.fetchone() 
+        self.cursor.execute(query, (nombre,))
+        result = self.cursor.fetchone()
 
-        
-        select = f"SELECT faltantes FROM estaciones where estclave = {clave[0]};"
-        self.cursor.execute(select)
-        faltantes = self.cursor.fetchone() 
+        estclave, latitud, longitud, faltantes, totales, missing_percentage = result
 
-        select = f"SELECT count(*) FROM registrodiario where estclave = {clave[0]};"
-        self.cursor.execute(select)
-        totales = self.cursor.fetchone() 
+        estacion_info += f"Latitud: {latitud} \nLongitud: {longitud}\n\n"
+        estacion_info += f"Registros totales: {totales}\n"
+        estacion_info += f"Registros faltantes: {faltantes} \n"
+        estacion_info += f"Porcentaje faltante: {missing_percentage}% \n\n"
 
-        estacion_info += f"Registros totales: {totales[0]}\n"
-        estacion_info += f"Registros faltantes: {faltantes[0]} \n"
-        estacion_info += f"Porcentaje faltante: {missing_percentage[0]}% \n\n"
-         
-        
+        query_records = """
+            SELECT FECHA, PRECIPITACION 
+            FROM REGISTRODIARIO 
+            WHERE estclave = %s 
+            ORDER BY FECHA;
+        """
+        self.cursor.execute(query_records, (estclave,))
+        daily_records = self.cursor.fetchall()
+
         estacion_info += "Fecha                | Precipitacion\n"
+        for record in daily_records:
+            estacion_info += f"{record[0]}      |        {record[1]}\n"
 
-        for t in result:
-            estacion_info += f"{t[0]}      |        {t[1]}\n"
         return estacion_info
+
     
     def save_preferences(self, filename='user_preferences.json'):
         with open(filename, 'w') as file:

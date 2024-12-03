@@ -6,7 +6,7 @@ def main():
     ctk.set_default_color_theme("blue")
 
     root = ctk.CTk()
-    root.title("Analísis de Precipitación")
+    root.title("Análisis de Precipitación")
 
     root.geometry("1280x720")
 
