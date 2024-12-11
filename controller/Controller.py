@@ -28,6 +28,10 @@ class Controller:
 
     def update_view(self):
         self.view.create_estaciones_frame(self.model.estaciones)
+    
+    def get_stations_list(self):
+        self.model.get_stations_metadata()
+        self.view.display_message("Lista de estaciones descargada correctamente!")
 
     def open_filters(self):
         self.view.open_filtros()
@@ -49,9 +53,9 @@ class Controller:
 
         save = self.view.check_save_preferences.get()
         print(f"is save checked? {save}")
-        self.model.set_estaciones(save, min_years, max_years, start_year, end_year, faltante)
+        stations_fetched = self.model.set_estaciones(save, min_years, max_years, start_year, end_year, faltante)
         self.update_view()
-
+        self.view.display_message(f"Se encontrarón {stations_fetched} estaciones con esas características")
         self.view.filtros_window.destroy()
 
     def search_trend_intervals(self, station):

@@ -87,7 +87,7 @@ class ExcelGenerator:
         for i, r in enumerate(raw_data[0], start=8):
             self.ws[f'B{i}'] = r[0]
             self.ws[f'C{i}'] = r[1]
-            if r[3] > 15:
+            if r[3] > 15 or data_type == 'modified_data':
                 self.ws[f'D{i}'] = r[2]
             self.ws[f'E{i}'] = r[3]
                 

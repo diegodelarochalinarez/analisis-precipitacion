@@ -1,6 +1,9 @@
 import customtkinter as ctk
 import tkinter as ttk
 from tkinter import messagebox
+from PIL import Image
+import os
+import sys
 
 class View:
     input_end_year = None
@@ -132,15 +135,24 @@ class View:
         self.frame_estaciones.grid(row=0, column=0, columnspan=1, rowspan=2, sticky='NSEW')
 
         self.frame_estaciones_label = ctk.CTkLabel(self.frame_estaciones, text="  Estaciones Sinaloa",
-                                                   compound="left", font=ctk.CTkFont(size=15, weight="bold"))
+                                                   compound="left", font=ctk.CTkFont(size=17, weight="bold"), height=40)
         self.frame_estaciones_label.grid(row=0, column=0, sticky='nsew')
 
         self.btn_estaciones = []
+
+        image_path = resource_path("./download.ico")  
+        btn_image = ctk.CTkImage(Image.open(image_path), size=(15, 15))  
+
+        btn_get_stations_list = ctk.CTkButton(self.frame_estaciones, height=40,width=100, border_spacing=10, text="Descargar lista",
+                                    font=ctk.CTkFont(size=14, weight="bold"), image=btn_image,
+                                    anchor="w", command=self.controller.get_stations_list)
+        btn_get_stations_list.grid(row=1, column=0, sticky='ew')
+    
         for i, nombre in enumerate(nombres):
             button = ctk.CTkButton(self.frame_estaciones, corner_radius=0, height=40, border_spacing=10, text=nombre,
                                     fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                     anchor="w", command=lambda t=nombre: self.controller.set_estacion(t))
-            button.grid(row=i+1, column=0, sticky='ew')
+            button.grid(row=(i+1)+1, column=0, sticky='ew')
             self.btn_estaciones.append(button)
     
     def show_preferences(self, min_years, max_years, start_year, end_year, faltante):
@@ -180,4 +192,12 @@ class View:
                             relief="flat")
             style.map("Treeview.Heading",
                         background=[('active', '#3484F0')])
-        
+            
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)

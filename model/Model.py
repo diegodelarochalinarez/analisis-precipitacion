@@ -5,15 +5,17 @@ import psycopg2 as psql
 from model.ETL import ETL  
 from datetime import datetime
 import json
+import csv
 
 class Model:
-    conn = psql.connect(database="Precipitacion",
-                        #host="26.21.167.220",
-                        host="localhost",
-                        user="diego",
-                        password="root",
-                        port="5432")
-    
+    conn = psql.connect(
+        database="Precipitacion",
+        host="26.21.167.220",
+        user="postgres",
+        password="root",
+        port="5432"
+    )
+                
     cursor = conn.cursor()
 
     user_preferences = {
@@ -66,6 +68,27 @@ class Model:
             self.user_preferences["estaciones"] = self.estaciones
 
             self.save_preferences()
+        return len(result)
+
+    def get_stations_metadata(self):
+        data = []
+        header = ["Nombre", "Clave", "Latitud", "Longitud"]
+        data.append(header)
+        for station in self.estaciones:
+            select_sql = f"""
+                SELECT ESTNOMBRE, ESTCLAVE, LATITUD, LONGITUD
+                FROM ESTACIONES 
+                WHERE ESTNOMBRE = '{station}';
+            """
+
+            self.cursor.execute(select_sql)
+            name, key, latitud, longitud = self.cursor.fetchone()
+            data.append([name, key, latitud, longitud])
+        
+        with open('estaciones.csv', mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerows(data)
+
 
     def get_estacion_info(self, nombre):
         estacion_info = f"Previsualización de los datos de la estación: {nombre}\n\n"
@@ -106,6 +129,8 @@ class Model:
         result = self.cursor.fetchone()
 
         estclave, latitud, longitud, faltantes, totales, missing_percentage = result
+
+        estacion_info += f"Código de la estación: {estclave}\n\n"
 
         estacion_info += f"Latitud: {latitud} \nLongitud: {longitud}\n\n"
         estacion_info += f"Registros totales: {totales}\n"
